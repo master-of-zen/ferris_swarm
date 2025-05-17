@@ -115,6 +115,8 @@ pub fn extract_non_video_streams(
             "-i",
             input_path.to_str().unwrap(),
             "-y",
+            "-map",
+            "0",
             "-vn",
             "-c", // copy all streams that is not video
             "copy",
