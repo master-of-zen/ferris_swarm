@@ -1,5 +1,5 @@
 [package]
-name = "video_encoding_system"
+name = "ferris_swarm"
 version = "0.1.0"
 edition = "2021"
 
