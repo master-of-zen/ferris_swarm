@@ -11,11 +11,11 @@ license = "GPL-3.0"
 readme = "README.md"
 
 [[bin]]
-name = "node"
+name = "ferris_swarm_node"
 path = "src/bin/node.rs"
 
 [[bin]]
-name = "client"
+name = "ferris_swarm_client"
 path = "src/bin/client.rs"
 
 [dependencies]
