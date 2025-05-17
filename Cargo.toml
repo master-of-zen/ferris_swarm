@@ -8,7 +8,7 @@ repository = "https://github.com/master-of-zen/ferris_swarm"
 keywords = ["av1", "encoder", "video", "multimedia", "rust"]
 categories = ["multimedia::encoding", "command-line-utilities"]
 license = "GPL-3.0"
-readme = "../README.md"
+readme = "README.md"
 
 [[bin]]
 name = "node"
