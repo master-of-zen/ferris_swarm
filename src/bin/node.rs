@@ -1,22 +1,21 @@
+use std::{fs, path::PathBuf};
+
 use anyhow::Result;
 use clap::Parser;
-use std::fs;
-use std::path::PathBuf;
+use ferris_swarm::chunk::{verify_ffmpeg, Chunk};
 use tonic::{transport::Server, Request, Response, Status};
 use tracing::{debug, error, info, instrument};
-use video_encoding::video_encoding_service_server::{
-    VideoEncodingService, VideoEncodingServiceServer,
+use video_encoding::{
+    video_encoding_service_server::{VideoEncodingService, VideoEncodingServiceServer},
+    EncodeChunkRequest,
+    EncodeChunkResponse,
 };
-use video_encoding::{EncodeChunkRequest, EncodeChunkResponse};
-use video_encoding_system::chunk::{verify_ffmpeg, Chunk};
 
 pub mod video_encoding {
     tonic::include_proto!("video_encoding");
 }
 
-use video_encoding_system::config::TempConfig;
-use video_encoding_system::logging::init_logging;
-use video_encoding_system::settings::Settings;
+use ferris_swarm::{config::TempConfig, logging::init_logging, settings::Settings};
 
 const MAX_MESSAGE_SIZE: usize = 1024 * 1024 * 1024; // 1 GB
 
@@ -62,14 +61,9 @@ impl VideoEncodingService for VideoEncodingNode {
         let req = request.into_inner();
         info!("Received encode request for chunk {}", req.chunk_index);
 
-        let input_path = self
-            .config
-            .segment_dir()
-            .join(format!("chunk_{}.mkv", req.chunk_index));
-        let output_path = self
-            .config
-            .encode_dir()
-            .join(format!("encoded_chunk_{}.mkv", req.chunk_index));
+        let input_path = self.config.segment_dir().join(format!("chunk_{}.mkv", req.chunk_index));
+        let output_path =
+            self.config.encode_dir().join(format!("encoded_chunk_{}.mkv", req.chunk_index));
 
         debug!("Writing chunk data to file: {:?}", input_path);
         fs::write(&input_path, &req.chunk_data).map_err(|e| {
@@ -109,20 +103,20 @@ impl VideoEncodingService for VideoEncodingNode {
 
                 Ok(Response::new(EncodeChunkResponse {
                     encoded_chunk_data: encoded_data,
-                    chunk_index: req.chunk_index,
-                    success: true,
-                    error_message: String::new(),
+                    chunk_index:        req.chunk_index,
+                    success:            true,
+                    error_message:      String::new(),
                 }))
-            }
+            },
             Err(e) => {
                 error!("Failed to encode chunk {}: {}", req.chunk_index, e);
                 Ok(Response::new(EncodeChunkResponse {
                     encoded_chunk_data: Vec::new(),
-                    chunk_index: req.chunk_index,
-                    success: false,
-                    error_message: e.to_string(),
+                    chunk_index:        req.chunk_index,
+                    success:            false,
+                    error_message:      e.to_string(),
                 }))
-            }
+            },
         }
     }
 }
@@ -147,7 +141,9 @@ async fn main() -> Result<()> {
         &PathBuf::from("dummy"),
         "dummy",
     );
-    let server = VideoEncodingNode { config };
+    let server = VideoEncodingNode {
+        config,
+    };
 
     let service = VideoEncodingServiceServer::new(server)
         .max_encoding_message_size(MAX_MESSAGE_SIZE)

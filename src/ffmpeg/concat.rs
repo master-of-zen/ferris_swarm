@@ -1,8 +1,12 @@
-use crate::error::VideoEncodeError;
-use std::fs;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::{
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
 use tracing::{debug, error, info, instrument};
+
+use crate::error::VideoEncodeError;
 
 /// Concatenates video segments and adds back non-video streams.
 #[instrument(skip(segment_paths))]
@@ -67,10 +71,7 @@ pub fn concatenate_videos_and_copy_streams(
     debug!("FFmpeg command: ffmpeg {:?}", ffmpeg_args);
 
     // Execute FFmpeg command
-    let status = Command::new("ffmpeg")
-        .arg("-hide_banner")
-        .args(&ffmpeg_args)
-        .status()?;
+    let status = Command::new("ffmpeg").arg("-hide_banner").args(&ffmpeg_args).status()?;
 
     if !status.success() {
         error!("Failed to concatenate videos and copy streams");

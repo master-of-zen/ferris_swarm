@@ -1,16 +1,19 @@
-use crate::error::VideoEncodeError;
-use crate::ffmpeg::segment::segment_video;
+use std::{
+    path::{Path, PathBuf},
+    process::Command,
+};
+
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use std::process::Command;
 use tracing::{debug, error, info, instrument};
+
+use crate::{error::VideoEncodeError, ffmpeg::segment::segment_video};
 
 /// Represents a video chunk for processing
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Chunk {
-    pub source_path: PathBuf,
-    pub encoded_path: Option<PathBuf>,
-    pub index: usize,
+    pub source_path:        PathBuf,
+    pub encoded_path:       Option<PathBuf>,
+    pub index:              usize,
     pub encoder_parameters: Vec<String>,
 }
 
@@ -62,9 +65,9 @@ impl Chunk {
 
         info!("Successfully encoded chunk {}", self.index);
         Ok(Chunk {
-            source_path: self.source_path.clone(),
-            encoded_path: Some(output_path),
-            index: self.index,
+            source_path:        self.source_path.clone(),
+            encoded_path:       Some(output_path),
+            index:              self.index,
             encoder_parameters: self.encoder_parameters.clone(),
         })
     }
@@ -128,10 +131,10 @@ pub fn verify_ffmpeg() -> Result<(), VideoEncodeError> {
         Ok(path) => {
             info!("FFmpeg found at: {:?}", path);
             Ok(())
-        }
+        },
         Err(e) => {
             error!("FFmpeg not found: {}", e);
             Err(VideoEncodeError::FfmpegNotFound)
-        }
+        },
     }
 }

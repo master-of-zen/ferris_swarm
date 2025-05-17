@@ -6,10 +6,9 @@ use std::{
     process::Command,
 };
 
-use crate::error::VideoEncodeError;
 use tracing::{debug, error, info, instrument};
 
-use crate::chunk::verify_ffmpeg;
+use crate::{chunk::verify_ffmpeg, error::VideoEncodeError};
 
 /// Due to the nature of method -segment_time
 /// Getting expected number of segments is not
@@ -63,12 +62,10 @@ pub fn segment_video(
 
     debug!("FFmpeg command: ffmpeg {:?}", ffmpeg_args);
 
-    // Free line to place your prayers that source don't have bidirectional keyframes
+    // Free line to place your prayers that source don't have bidirectional
+    // keyframes
     //
-    let status = Command::new("ffmpeg")
-        .arg("-hide_banner")
-        .args(&ffmpeg_args)
-        .status()?;
+    let status = Command::new("ffmpeg").arg("-hide_banner").args(&ffmpeg_args).status()?;
 
     if !status.success() {
         error!("Failed to split video. FFmpeg exit status: {}", status);

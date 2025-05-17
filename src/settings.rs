@@ -1,6 +1,7 @@
+use std::path::{Path, PathBuf};
+
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
 use tracing::debug;
 
 #[derive(Debug, Deserialize)]
@@ -17,13 +18,13 @@ pub struct NodeSettings {
 #[derive(Debug, Deserialize)]
 pub struct ProcessingSettings {
     pub segment_duration: f64,
-    pub temp_dir: PathBuf,
+    pub temp_dir:         PathBuf,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub client: ClientSettings,
-    pub node: NodeSettings,
+    pub client:     ClientSettings,
+    pub node:       NodeSettings,
     pub processing: ProcessingSettings,
 }
 
@@ -35,9 +36,7 @@ impl Settings {
     }
 
     pub fn new() -> Result<Self, ConfigError> {
-        let config = Config::builder()
-            .add_source(File::with_name("config"))
-            .build()?;
+        let config = Config::builder().add_source(File::with_name("config")).build()?;
 
         debug!("Created config : {:?}", config);
         config.try_deserialize()

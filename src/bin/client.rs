@@ -1,25 +1,31 @@
+use std::{path::PathBuf, sync::Arc};
+
 use anyhow::{Context, Result};
 use clap::Parser;
+use ferris_swarm::{
+    chunk::{convert_files_to_chunks, verify_ffmpeg},
+    ffmpeg,
+};
 use ffmpeg::segment::extract_non_video_streams;
 use futures::stream::{FuturesUnordered, StreamExt};
-use std::path::PathBuf;
-use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 use tracing::{debug, error, info, instrument, warn};
-use video_encoding_system::chunk::{convert_files_to_chunks, verify_ffmpeg};
-use video_encoding_system::ffmpeg;
 
 pub mod video_encoding {
     tonic::include_proto!("video_encoding");
 }
 
-use video_encoding::video_encoding_service_client::VideoEncodingServiceClient;
-use video_encoding::EncodeChunkRequest;
-use video_encoding_system::chunk::{split_video, Chunk};
-use video_encoding_system::config::create_temp_config;
-use video_encoding_system::ffmpeg::concat::concatenate_videos_and_copy_streams;
-use video_encoding_system::logging::init_logging;
-use video_encoding_system::settings::Settings;
+use ferris_swarm::{
+    chunk::{split_video, Chunk},
+    config::create_temp_config,
+    ffmpeg::concat::concatenate_videos_and_copy_streams,
+    logging::init_logging,
+    settings::Settings,
+};
+use video_encoding::{
+    video_encoding_service_client::VideoEncodingServiceClient,
+    EncodeChunkRequest,
+};
 
 const MAX_MESSAGE_SIZE: usize = 1024 * 1024 * 1024; // 1 GB
 
@@ -63,15 +69,15 @@ struct Cli {
 /// Represents a node connection with its processing capacity
 #[derive(Clone)]
 struct NodeConnection {
-    client: VideoEncodingServiceClient<tonic::transport::Channel>,
-    address: String,
+    client:    VideoEncodingServiceClient<tonic::transport::Channel>,
+    address:   String,
     semaphore: Arc<Semaphore>,
 }
 
 /// Represents the state of the encoding process
 struct EncodingState {
     /// Chunks waiting to be encoded
-    pending_chunks: Vec<Chunk>,
+    pending_chunks:   Vec<Chunk>,
     /// Chunks that have been successfully encoded
     completed_chunks: Vec<Chunk>,
 }
@@ -108,7 +114,7 @@ async fn main() -> Result<()> {
 
     // Initializing client state
     let encoding_state = Arc::new(Mutex::new(EncodingState {
-        pending_chunks: chunks,
+        pending_chunks:   chunks,
         completed_chunks: Vec::new(),
     }));
 
@@ -139,10 +145,8 @@ async fn main() -> Result<()> {
 
     info!("Concatenating encoded chunks");
 
-    let encoded_paths: Vec<PathBuf> = encoded_chunks
-        .iter()
-        .map(|chunk| chunk.encoded_path.clone().unwrap())
-        .collect();
+    let encoded_paths: Vec<PathBuf> =
+        encoded_chunks.iter().map(|chunk| chunk.encoded_path.clone().unwrap()).collect();
 
     concatenate_videos_and_copy_streams(
         encoded_paths,
@@ -202,7 +206,8 @@ fn load_settings(cli: &Cli) -> Result<Settings> {
     Ok(settings)
 }
 
-/// Initialize connections to all provided node addresses with their corresponding slots
+/// Initialize connections to all provided node addresses with their
+/// corresponding slots
 #[instrument(skip(addresses, slots))]
 async fn initialize_nodes(addresses: &[String], slots: &[usize]) -> Result<Vec<NodeConnection>> {
     let mut nodes = Vec::new();
@@ -272,7 +277,7 @@ async fn encode_chunks_on_node(
                                     "Chunk {} encoded successfully on node {}",
                                     chunk.index, address
                                 );
-                            }
+                            },
                             Err(e) => {
                                 error!(
                                     "Failed to encode chunk {} on node {}: {}",
@@ -280,15 +285,15 @@ async fn encode_chunks_on_node(
                                 );
                                 let mut state = state_clone.lock().await;
                                 state.pending_chunks.push(chunk);
-                            }
+                            },
                         }
                     }));
-                }
+                },
                 None => {
                     // No more chunks to process
                     drop(permit);
                     break;
-                }
+                },
             }
         } else {
             // If we can't acquire a permit, wait for some ongoing tasks to complete

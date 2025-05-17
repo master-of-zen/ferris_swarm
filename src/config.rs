@@ -1,5 +1,6 @@
-use sha2::{Digest, Sha256};
 use std::{fs, path::PathBuf};
+
+use sha2::{Digest, Sha256};
 use tracing::{debug, instrument};
 
 use crate::{error::VideoEncodeError, settings::Settings};
@@ -8,9 +9,9 @@ use crate::{error::VideoEncodeError, settings::Settings};
 #[derive(Clone, Debug, Default)]
 pub struct TempConfig {
     /// Base temporary directory
-    pub temp_dir: PathBuf,
+    pub temp_dir:      PathBuf,
     pub temp_segments: PathBuf,
-    pub temp_encoded: PathBuf,
+    pub temp_encoded:  PathBuf,
 }
 
 impl TempConfig {

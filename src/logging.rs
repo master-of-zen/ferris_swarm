@@ -1,11 +1,13 @@
 use std::env;
+
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 /// Initialize the logging system for the application.
 ///
 /// This function sets up tracing with the following features:
-/// - Reads log level from the RUST_LOG environment variable (defaults to "info")
+/// - Reads log level from the RUST_LOG environment variable (defaults to
+///   "info")
 /// - Enables logging to both console and a file
 /// - Uses daily log rotation for file logging
 /// - Logs the duration of each span
