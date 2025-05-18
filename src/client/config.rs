@@ -1,8 +1,8 @@
 use anyhow::Result;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, warn}; // Added warn
 
 use super::cli::Cli;
-use crate::settings::Settings; // Use the Cli from the same client module
+use crate::settings::{ConcatenatorChoice, Settings}; // Added ConcatenatorChoice
 
 #[instrument(skip(cli))]
 pub fn load_settings_with_cli_overrides(cli: &Cli) -> Result<Settings> {
@@ -17,8 +17,7 @@ pub fn load_settings_with_cli_overrides(cli: &Cli) -> Result<Settings> {
                 "No config file specified, loading default settings (e.g., from 'config.toml' or \
                  defaults)."
             );
-            Settings::new()? // Assumes Settings::new() tries to load
-                             // "config.toml" or has defaults
+            Settings::new()?
         },
     };
 
@@ -32,16 +31,11 @@ pub fn load_settings_with_cli_overrides(cli: &Cli) -> Result<Settings> {
             "Overriding encoder_params from CLI: {:?}",
             cli_encoder_params
         );
-        // The original code had a specific way of splitting these params.
-        // Assuming cli_encoder_params is already a Vec<String> as ffmpeg expects.
         let mut params: Vec<String> = Vec::new();
         cli_encoder_params.iter().for_each(|x| {
-            params.extend(x.split_whitespace() // Split by whitespace
-                 .map(str::to_string)
-                 .collect::<Vec<String>>());
+            params.extend(x.split_whitespace().map(str::to_string).collect::<Vec<String>>());
         });
         if !params.contains(&"-y".to_string()) {
-            // Ensure -y for overwriting
             params.push("-y".to_string());
         }
         settings.client.encoder_params = params;
@@ -60,8 +54,26 @@ pub fn load_settings_with_cli_overrides(cli: &Cli) -> Result<Settings> {
         settings.processing.segment_duration = segment_duration;
     }
 
-    // Validate that if CLI nodes are provided, CLI slots are also provided and
-    // match length
+    if let Some(concat_choice_str) = &cli.concatenator {
+        match concat_choice_str.as_str() {
+            "ffmpeg" => {
+                debug!("Overriding processing.concatenator from CLI: ffmpeg");
+                settings.processing.concatenator = ConcatenatorChoice::Ffmpeg;
+            },
+            "mkvmerge" => {
+                debug!("Overriding processing.concatenator from CLI: mkvmerge");
+                settings.processing.concatenator = ConcatenatorChoice::Mkvmerge;
+            },
+            _ => {
+                // This case should not be reached due to clap's value_parser
+                warn!(
+                    "Invalid concatenator choice from CLI: {}. Using default/config value.",
+                    concat_choice_str
+                );
+            },
+        }
+    }
+
     if !cli.nodes.is_empty() && cli.slots.is_empty() {
         return Err(anyhow::anyhow!(
             "If --nodes are provided via CLI, --slots must also be provided."

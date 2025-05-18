@@ -16,3 +16,18 @@ pub fn verify_ffmpeg() -> Result<(), VideoEncodeError> {
         },
     }
 }
+
+#[instrument]
+pub fn verify_mkvmerge() -> Result<(), VideoEncodeError> {
+    debug!("Verifying mkvmerge installation");
+    match which::which("mkvmerge") {
+        Ok(path) => {
+            info!("mkvmerge found at: {:?}", path);
+            Ok(())
+        },
+        Err(e) => {
+            error!("mkvmerge not found: {}", e);
+            Err(VideoEncodeError::MkvmergeNotFound)
+        },
+    }
+}

@@ -3,22 +3,21 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::{Context, Result};
 use clap::Parser;
 use ferris_swarm::{
-    chunk::{convert_files_to_chunks, Chunk},
+    chunk::convert_files_to_chunks,
     client::{
         cli::Cli,
-        comms::{initialize_node_connections, NodeConnection},
+        comms::initialize_node_connections,
         config::load_settings_with_cli_overrides,
         tasks::{process_chunks_on_node_worker, EncodingTaskState},
     },
     ffmpeg::{
-        concatenator::concatenate_videos_and_copy_streams,
+        concatenator::concatenate_videos_ffmpeg,
         segmenter::extract_non_video_streams,
         utils::verify_ffmpeg,
     },
     job_config::create_job_temp_config,
     logging::init_logging,
-    orchestration::split_video_into_segments,
-    settings::Settings, // Only used for type hint, not directly
+    orchestration::split_video_into_segments, // Only used for type hint, not directly
 };
 use futures::stream::{FuturesUnordered, StreamExt}; // For managing node worker tasks
 use tokio::sync::Mutex;
@@ -197,7 +196,7 @@ async fn main() -> Result<()> {
         .map(|chunk| chunk.encoded_path.expect("Completed chunk must have an encoded_path"))
         .collect();
 
-    concatenate_videos_and_copy_streams(
+    concatenate_videos_ffmpeg(
         encoded_chunk_paths,
         &non_video_streams_path,
         &PathBuf::from(&cli_args.output_file),

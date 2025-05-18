@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{builder::TypedValueParser, Parser};
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about = "Ferris Swarm Client: Distributes video encoding tasks.", long_about = None)]
@@ -29,10 +29,6 @@ pub struct Cli {
 
     /// Encoder parameters string (e.g., "-c:v libx264 -crf 23").
     /// Overrides encoder_params in config file if provided.
-    /// Note: these are passed as a single string and split, or multiple args.
-    /// For simplicity, current implementation expects them pre-split or one
-    /// string. The original code splits a Vec<String> where each string
-    /// might contain spaces.
     #[arg(long, num_args = 1..)]
     pub encoder_params: Option<Vec<String>>,
 
@@ -46,4 +42,10 @@ pub struct Cli {
     /// provided.
     #[arg(long)]
     pub segment_duration: Option<f64>,
+
+    /// Concatenation tool to use ('ffmpeg' or 'mkvmerge').
+    /// Overrides 'concatenator' in [processing] section of config file if
+    /// provided.
+    #[arg(long, value_parser = clap::builder::PossibleValuesParser::new(["ffmpeg", "mkvmerge"]).map(|s| s.to_lowercase()))]
+    pub concatenator: Option<String>,
 }
