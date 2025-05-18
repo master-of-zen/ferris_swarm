@@ -1,6 +1,10 @@
 pub mod chunk;
-pub mod config;
+pub mod client;
 pub mod error;
 pub mod ffmpeg;
+pub mod job_config;
 pub mod logging;
+pub mod node;
+pub mod orchestration;
+pub mod protos;
 pub mod settings;

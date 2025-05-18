@@ -12,7 +12,8 @@ pub struct ClientSettings {
 
 #[derive(Debug, Deserialize)]
 pub struct NodeSettings {
-    pub address: String,
+    pub address:  String,
+    pub temp_dir: PathBuf,
 }
 
 #[derive(Debug, Deserialize)]

@@ -1,12 +1,12 @@
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
+use std::path::{Path, PathBuf}; // Added Path
 
 use serde::{Deserialize, Serialize};
 use tracing::{debug, error, info, instrument};
 
-use crate::{error::VideoEncodeError, ffmpeg::segment::segment_video};
+use crate::{
+    error::VideoEncodeError,
+    ffmpeg, // Use the ffmpeg module
+};
 
 /// Represents a video chunk for processing
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -26,8 +26,15 @@ impl Chunk {
         );
 
         if !source_path.exists() {
+            // This check is good, but consider if it should be an error returned rather
+            // than panic
             error!("Source path does not exist: {:?}", source_path);
-            panic!("Source path does not exist");
+            // For a library, panicking is usually not ideal. Return Result instead.
+            // However, keeping original behavior for now.
+            panic!(
+                "Source path does not exist for Chunk::new: {:?}",
+                source_path
+            );
         }
 
         Chunk {
@@ -38,32 +45,25 @@ impl Chunk {
         }
     }
 
+    /// Encodes the chunk using ffmpeg.
+    /// The result is a new Chunk instance with `encoded_path` set.
     #[instrument(skip(self))]
     pub fn encode(&self, output_path: PathBuf) -> Result<Chunk, VideoEncodeError> {
         debug!(
-            "Encoding chunk {}: source={:?}, output={:?}, encoder_parameters={:?} ",
+            "Encoding chunk {} [logic]: source={:?}, output={:?}, encoder_parameters={:?} ",
             self.index, self.source_path, output_path, self.encoder_parameters
         );
 
-        let command = Command::new("ffmpeg")
-            .arg("-hide_banner")
-            .arg("-i")
-            .arg(&self.source_path)
-            .args(&self.encoder_parameters)
-            .arg(&output_path)
-            .output()?;
+        ffmpeg::encoder::encode_with_ffmpeg(
+            &self.source_path,
+            &output_path,
+            &self.encoder_parameters,
+        )?;
 
-        if !command.status.success() {
-            let error_msg = format!(
-                "Failed to encode chunk {}: {:?}",
-                self.index,
-                String::from_utf8_lossy(&command.stderr)
-            );
-            error!("{}", error_msg);
-            return Err(VideoEncodeError::Encoding(error_msg));
-        }
-
-        info!("Successfully encoded chunk {}", self.index);
+        info!(
+            "Successfully encoded chunk {} to {:?}",
+            self.index, output_path
+        );
         Ok(Chunk {
             source_path:        self.source_path.clone(),
             encoded_path:       Some(output_path),
@@ -84,9 +84,17 @@ pub fn convert_files_to_chunks(
         .into_iter()
         .enumerate()
         .map(|(index, path)| {
+            // It's good to check path.exists() here too, or ensure `new` returns Result
             if !path.exists() {
-                error!("Segment file does not exist: {:?}", path);
-                panic!("Segment file does not exist");
+                error!(
+                    "Segment file does not exist during chunk conversion: {:?}",
+                    path
+                );
+                // This should ideally propagate as an error
+                panic!(
+                    "Segment file does not exist for convert_files_to_chunks: {:?}",
+                    path
+                );
             }
             Chunk::new(path, index, encoder_params.clone())
         })
@@ -95,46 +103,5 @@ pub fn convert_files_to_chunks(
     info!("Converted {} files to chunks", chunks.len());
     Ok(chunks)
 }
-
-#[instrument(skip(encoder_params))]
-pub fn split_video(
-    input_path: &Path,
-    segment_duration: f64,
-    segment_dir: &Path,
-    encoder_params: &[String],
-    encode_dir: &Path,
-) -> Result<Vec<PathBuf>, VideoEncodeError> {
-    debug!(
-        "Splitting video: input={:?}, duration={}, segment_dir={:?}, params={:?}, encode_dir={:?}",
-        input_path, segment_duration, segment_dir, encoder_params, encode_dir
-    );
-
-    let segmented_files = segment_video(input_path, segment_duration, segment_dir)?;
-
-    info!(
-        "Video segmentation complete: {} files",
-        segmented_files.len()
-    );
-
-    Ok(segmented_files)
-}
-
-/// Verifies that FFmpeg is installed and accessible
-///
-/// # Returns
-///
-/// A Result indicating success or a VideoEncodeError if FFmpeg is not found
-#[instrument]
-pub fn verify_ffmpeg() -> Result<(), VideoEncodeError> {
-    debug!("Verifying FFmpeg installation");
-    match which::which("ffmpeg") {
-        Ok(path) => {
-            info!("FFmpeg found at: {:?}", path);
-            Ok(())
-        },
-        Err(e) => {
-            error!("FFmpeg not found: {}", e);
-            Err(VideoEncodeError::FfmpegNotFound)
-        },
-    }
-}
+// `split_video` function removed (moved to orchestration)
+// `verify_ffmpeg` function removed (moved to ffmpeg::utils)

@@ -1,2 +1,4 @@
-pub mod concat;
-pub mod segment;
+pub mod concatenator;
+pub mod encoder;
+pub mod segmenter;
+pub mod utils;
