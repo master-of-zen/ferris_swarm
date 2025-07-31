@@ -22,7 +22,8 @@ pub fn create_router(state: ConstellationState) -> Router {
         .route("/jobs/:id", put(update_job))
         .route("/chunks/:id", put(update_chunk))
         .route("/dashboard/data", get(get_dashboard_data))
-        .route("/status", get(get_status));
+        .route("/status", get(get_status))
+        .route("/health", get(health_check));
 
     Router::new()
         .route("/", get(dashboard))

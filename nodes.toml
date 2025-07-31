@@ -1,0 +1,62 @@
+[constellation]
+url = "http://localhost:3030"
+auto_register = true
+heartbeat_interval = 30
+registration_interval = 60
+
+[[nodes]]
+name = "workstation-01"
+address = "192.168.1.101:8080"
+enabled = true
+
+[nodes.capabilities]
+max_concurrent_chunks = 8
+supported_encoders = [
+    "av1",
+    "h264",
+    "hevc",
+]
+cpu_cores = 16
+memory_gb = 32
+
+[nodes.tags]
+environment = "production"
+location = "datacenter-1"
+
+[[nodes]]
+name = "workstation-02"
+address = "192.168.1.102:8080"
+enabled = true
+
+[nodes.capabilities]
+max_concurrent_chunks = 4
+supported_encoders = [
+    "h264",
+    "hevc",
+]
+cpu_cores = 8
+memory_gb = 16
+
+[nodes.tags]
+environment = "development"
+location = "office"
+
+[[nodes]]
+name = "gpu-server-01"
+address = "192.168.1.103:8080"
+enabled = false
+
+[nodes.capabilities]
+max_concurrent_chunks = 16
+supported_encoders = [
+    "av1",
+    "h264",
+    "hevc",
+]
+cpu_cores = 32
+memory_gb = 64
+
+[nodes.tags]
+environment = "production"
+priority = "high"
+gpu = "nvidia-rtx-4090"

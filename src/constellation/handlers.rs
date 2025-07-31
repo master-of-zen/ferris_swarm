@@ -4,7 +4,7 @@ use axum::{
     response::Json,
 };
 use serde_json::json;
-use tracing::info;
+
 use uuid::Uuid;
 
 use crate::constellation::{
@@ -161,5 +161,13 @@ pub async fn get_status(
         "jobs": jobs_count,
         "chunks": chunks_count,
         "uptime": "N/A"
+    }))
+}
+
+pub async fn health_check() -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "healthy",
+        "service": "ferris-swarm-constellation",
+        "version": "1.0"
     }))
 }

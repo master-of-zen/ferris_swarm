@@ -3,7 +3,7 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::Result;
 use futures::stream::{FuturesUnordered, StreamExt};
 use tokio::sync::Mutex;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument};
 
 use super::comms::{send_chunk_for_encoding, NodeConnection};
 use crate::chunk::Chunk;

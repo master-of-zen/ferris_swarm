@@ -10,10 +10,28 @@ pub struct ClientSettings {
     pub encoder_params: Vec<String>,
 }
 
+impl Default for ClientSettings {
+    fn default() -> Self {
+        Self {
+            node_addresses: vec!["127.0.0.1:50051".to_string()],
+            encoder_params: vec!["-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string()],
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct NodeSettings {
     pub address:  String,
     pub temp_dir: PathBuf,
+}
+
+impl Default for NodeSettings {
+    fn default() -> Self {
+        Self {
+            address: "0.0.0.0:50051".to_string(),
+            temp_dir: std::env::temp_dir().join("ferris_swarm_node"),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
@@ -38,11 +56,34 @@ pub struct ProcessingSettings {
     pub concatenator: ConcatenatorChoice,
 }
 
+impl Default for ProcessingSettings {
+    fn default() -> Self {
+        Self {
+            segment_duration: 10.0, // 10 seconds per segment
+            temp_dir: std::env::temp_dir().join("ferris_swarm_processing"),
+            concatenator: ConcatenatorChoice::default(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Settings {
+    #[serde(default)]
     pub client:     ClientSettings,
+    #[serde(default)]
     pub node:       NodeSettings,
+    #[serde(default)]
     pub processing: ProcessingSettings,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            client: ClientSettings::default(),
+            node: NodeSettings::default(),
+            processing: ProcessingSettings::default(),
+        }
+    }
 }
 
 impl Settings {
@@ -53,13 +94,25 @@ impl Settings {
 
     pub fn new() -> Result<Self, ConfigError> {
         // Attempt to load from "config.toml" or "config.json" etc. in CWD
-        // If not found, it will use defaults specified in structs (like for
-        // concatenator)
+        // If not found, use defaults
         let config = Config::builder()
             .add_source(File::with_name("config").required(false)) // Make it not required to allow for no config file
             .build()?;
 
         debug!("Loaded settings configuration: {:?}", config);
-        config.try_deserialize()
+        
+        // If config is empty (no file found), return defaults
+        let settings = match config.try_deserialize::<Settings>() {
+            Ok(settings) => {
+                debug!("Successfully loaded settings from config file");
+                settings
+            }
+            Err(e) => {
+                debug!("No config file found or failed to parse, using defaults: {}", e);
+                Settings::default()
+            }
+        };
+        
+        Ok(settings)
     }
 }

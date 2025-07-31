@@ -1,8 +1,14 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
-use ferris_swarm::constellation::{
-    config::ConstellationConfig, routes::create_router, state::ConstellationState,
+use ferris_swarm::{
+    constellation::{
+        auto_register::AutoRegister,
+        config::ConstellationConfig, 
+        routes::create_router, 
+        state::ConstellationState,
+    },
+    discovery::DiscoveryService,
 };
 use tokio::net::TcpListener;
 use tracing::{error, info};
@@ -19,6 +25,7 @@ struct Cli {
 enum Commands {
     Start(StartArgs),
     Config(ConfigArgs),
+    Nodes(NodesArgs),
 }
 
 #[derive(Args)]
@@ -31,11 +38,26 @@ struct StartArgs {
     
     #[arg(short, long, help = "Enable verbose logging")]
     verbose: bool,
+
+    #[arg(long, help = "Nodes configuration file for auto-registration")]
+    nodes_config: Option<PathBuf>,
+
+    #[arg(long, help = "Enable auto-registration from nodes config")]
+    auto_register: bool,
+
+    #[arg(long, help = "Disable mDNS service advertisement")]
+    no_mdns: bool,
 }
 
 #[derive(Args)]
 struct ConfigArgs {
     #[arg(short, long, help = "Generate default configuration file")]
+    generate: Option<PathBuf>,
+}
+
+#[derive(Args)]
+struct NodesArgs {
+    #[arg(short, long, help = "Generate sample nodes configuration file")]
     generate: Option<PathBuf>,
 }
 
@@ -46,6 +68,7 @@ async fn main() -> anyhow::Result<()> {
     match cli.command {
         Commands::Start(args) => start_constellation(args).await,
         Commands::Config(args) => handle_config(args).await,
+        Commands::Nodes(args) => handle_nodes_config(args).await,
     }
 }
 
@@ -67,6 +90,51 @@ async fn start_constellation(args: StartArgs) -> anyhow::Result<()> {
     let state = ConstellationState::new(config);
     let cleanup_handle = state.clone().start_cleanup_task();
 
+    // Start auto-registration service if enabled
+    let auto_register_handle = if args.auto_register {
+        if let Some(nodes_config_path) = args.nodes_config {
+            info!("Starting auto-registration service with config: {:?}", nodes_config_path);
+            let mut auto_register = AutoRegister::new(nodes_config_path, state.clone());
+            
+            Some(tokio::spawn(async move {
+                if let Err(e) = auto_register.start_auto_registration().await {
+                    error!("Auto-registration service failed: {}", e);
+                }
+            }))
+        } else {
+            info!("Auto-registration enabled but no nodes config provided. Use --nodes-config");
+            None
+        }
+    } else {
+        None
+    };
+
+    // Start mDNS service advertisement
+    let _mdns_handle = if !args.no_mdns {
+        let discovery_service = DiscoveryService::new();
+        let hostname = hostname::get()
+            .map(|h| h.to_string_lossy().to_string())
+            .unwrap_or_else(|_| "ferris-constellation".to_string());
+        let port = bind_address.port();
+
+        info!("Starting mDNS service advertisement for {}:{}", hostname, port);
+        
+        match discovery_service.advertise_constellation(port, &hostname).await {
+            Ok(_) => {
+                info!("mDNS service advertisement started successfully");
+                Some(())
+            }
+            Err(e) => {
+                error!("Failed to start mDNS advertisement: {}", e);
+                info!("Constellation will continue without network discovery");
+                None
+            }
+        }
+    } else {
+        info!("mDNS service advertisement disabled");
+        None
+    };
+
     let app = create_router(state);
     let listener = TcpListener::bind(bind_address).await?;
     
@@ -77,7 +145,11 @@ async fn start_constellation(args: StartArgs) -> anyhow::Result<()> {
 
     let server_result = axum::serve(listener, app).await;
     
+    // Cleanup
     cleanup_handle.abort();
+    if let Some(auto_handle) = auto_register_handle {
+        auto_handle.abort();
+    }
     
     if let Err(e) = server_result {
         error!("Server error: {}", e);
@@ -96,6 +168,17 @@ async fn handle_config(args: ConfigArgs) -> anyhow::Result<()> {
         println!("Generated default configuration at: {}", path.display());
     } else {
         println!("Use --generate <path> to create a default configuration file");
+    }
+
+    Ok(())
+}
+
+async fn handle_nodes_config(args: NodesArgs) -> anyhow::Result<()> {
+    if let Some(path) = args.generate {
+        ferris_swarm::constellation::auto_register::AutoRegister::generate_sample_config(&path).await?;
+        println!("Generated sample nodes configuration at: {}", path.display());
+    } else {
+        println!("Use --generate <path> to create a sample nodes configuration file");
     }
 
     Ok(())

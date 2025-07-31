@@ -3,10 +3,10 @@ use std::{path::PathBuf, sync::Arc};
 use anyhow::{Context, Result};
 use clap::Parser;
 use ferris_swarm::{
-    chunk::{convert_files_to_chunks, Chunk},
+    chunk::convert_files_to_chunks,
     client::{
         cli::Cli,
-        comms::{initialize_node_connections, NodeConnection},
+        comms::initialize_node_connections,
         config::load_settings_with_cli_overrides,
         tasks::{process_chunks_on_node_worker, EncodingTaskState},
     },
@@ -18,7 +18,7 @@ use ferris_swarm::{
     job_config::create_job_temp_config,
     logging::init_logging,
     orchestration::split_video_into_segments,
-    settings::{ConcatenatorChoice, Settings}, // Added ConcatenatorChoice
+    settings::ConcatenatorChoice, // Added ConcatenatorChoice
 };
 use futures::stream::{FuturesUnordered, StreamExt};
 use tokio::sync::Mutex;
