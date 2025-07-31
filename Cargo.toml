@@ -18,6 +18,10 @@ path = "src/bin/node.rs"
 name = "ferris_swarm_client"
 path = "src/bin/client.rs"
 
+[[bin]]
+name = "ferris_swarm_constellation"
+path = "src/bin/constellation.rs"
+
 [dependencies]
 tonic = { version = "0.9", features = ["gzip"]}
 prost = "0.11"
@@ -37,6 +41,13 @@ sha2 = "0.10"
 hex = "0.4.3"
 futures = "0.3.30"
 tracing-appender = "0.2"
+axum = { version = "0.7", features = ["ws", "macros"] }
+tower = { version = "0.4", features = ["util"] }
+tower-http = { version = "0.5", features = ["cors", "fs"] }
+tokio-tungstenite = "0.21"
+askama = { version = "0.12", features = ["with-axum"] }
+chrono = { version = "0.4", features = ["serde"] }
+toml = "0.8"
 
 [build-dependencies]
 tonic-build = "0.9"

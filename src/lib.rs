@@ -1,5 +1,6 @@
 pub mod chunk;
 pub mod client;
+pub mod constellation;
 pub mod error;
 pub mod ffmpeg;
 pub mod job_config;
