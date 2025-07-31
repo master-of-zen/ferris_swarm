@@ -24,25 +24,7 @@
             padding: 20px;
         }
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: linear-gradient(135deg, #21262d 0%, #161b22 100%);
-            border-radius: 12px;
-            border: 1px solid #30363d;
-        }
 
-        h1 {
-            color: #f0883e;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            color: #8b949e;
-            font-size: 1.1em;
-        }
 
         .connection-status {
             position: fixed;
@@ -199,7 +181,7 @@
             background: #484f58;
         }
 
-        .node, .client, .job {
+        .node, .client, .job, .chunk {
             background: #161b22;
             border-radius: 8px;
             padding: 15px;
@@ -208,7 +190,7 @@
             transition: all 0.3s ease;
         }
 
-        .node:hover, .client:hover, .job:hover {
+        .node:hover, .client:hover, .job:hover, .chunk:hover {
             background: #1c2128;
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.3);
@@ -266,7 +248,23 @@
             color: white;
         }
 
-        .status-inprogress {
+        .chunk.processing {
+            border-left-color: #1f6feb;
+        }
+
+        .chunk.queued {
+            border-left-color: #d29922;
+        }
+
+        .chunk.completed {
+            border-left-color: #3fb950;
+        }
+
+        .chunk.failed {
+            border-left-color: #f85149;
+        }
+
+        .status-processing {
             background: #1f6feb;
             color: white;
         }
@@ -274,6 +272,29 @@
         .status-queued {
             background: #bf8700;
             color: white;
+        }
+
+        .status-completed {
+            background: #238636;
+            color: white;
+        }
+
+        .status-failed {
+            background: #da3633;
+            color: white;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+            font-size: 0.9em;
+        }
+
+        .fps-indicator {
+            color: #58a6ff;
+            font-weight: bold;
         }
 
         .progress-bar {
@@ -358,11 +379,6 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🦀 Ferris Swarm Constellation</h1>
-            <p class="subtitle">Central Management & Monitoring Dashboard</p>
-        </header>
-
         <div class="connection-status" id="connectionStatus">
             🔴 Disconnected
         </div>
@@ -380,6 +396,9 @@
             </button>
             <button class="tab-button" onclick="switchTab('jobs')">
                 🎬 Active Jobs
+            </button>
+            <button class="tab-button" onclick="switchTab('chunks')">
+                🧩 Chunks
             </button>
         </div>
 
@@ -448,6 +467,13 @@
             <div id="jobs" class="tab-pane">
                 <div class="items-container" id="jobsList">
                     <div class="no-data">No active jobs</div>
+                </div>
+            </div>
+
+            <!-- Chunks Tab -->
+            <div id="chunks" class="tab-pane">
+                <div class="items-container" id="chunksList">
+                    <div class="no-data">No chunks being processed</div>
                 </div>
             </div>
         </div>
@@ -521,6 +547,7 @@
                 this.updateNodes(data.nodes);
                 this.updateClients(data.clients);
                 this.updateJobs(data.jobs);
+                this.updateChunks(data.chunks || {});
             }
 
             updateStats(stats, nodes) {
@@ -651,6 +678,57 @@
                                     ).join('')}
                                     ${job.encoder_parameters.length > 3 ? '<span class="capability-chip">...</span>' : ''}
                                 </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateChunks(chunks) {
+                const container = document.getElementById('chunksList');
+                
+                if (Object.keys(chunks).length === 0) {
+                    container.innerHTML = '<div class="no-data">No chunks being processed</div>';
+                    return;
+                }
+
+                container.innerHTML = Object.values(chunks).map(chunk => {
+                    const frameProgress = chunk.total_frames > 0 ? 
+                        (chunk.encoded_frames / chunk.total_frames) * 100 : 0;
+                    
+                    return `
+                        <div class="chunk ${chunk.status.toLowerCase()}">
+                            <div class="item-header">
+                                <div class="item-title">
+                                    <strong>🧩 Chunk ${chunk.index}</strong>
+                                    <span class="status-badge status-${chunk.status.toLowerCase()}">${chunk.status}</span>
+                                </div>
+                                <div class="item-address">${chunk.id.substring(0, 12)}...</div>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${frameProgress}%"></div>
+                            </div>
+                            <div class="progress-info">
+                                <span>🎞️ Frames: ${chunk.encoded_frames}/${chunk.total_frames}</span>
+                                <span class="fps-indicator">${chunk.current_fps} FPS</span>
+                                <span><strong>${Math.round(frameProgress)}%</strong></span>
+                            </div>
+                            <div class="item-details">
+                                <div>🎬 <strong>Project:</strong> ${chunk.project_name || chunk.job_id.substring(0, 8) + '...'}</div>
+                                <div style="margin-top: 5px;">
+                                    🖥️ <strong>Node:</strong> ${chunk.assigned_node ? chunk.assigned_node.substring(0, 8) + '...' : 'Unassigned'} | 
+                                    ⏰ <strong>Started:</strong> ${chunk.started_at ? new Date(chunk.started_at).toLocaleTimeString() : 'Pending'}
+                                </div>
+                                ${chunk.estimated_completion ? `
+                                    <div style="margin-top: 5px;">
+                                        🕒 <strong>ETA:</strong> ${new Date(chunk.estimated_completion).toLocaleTimeString()}
+                                    </div>
+                                ` : ''}
+                                ${chunk.error_message ? `
+                                    <div style="color: #f85149; margin-top: 5px;">
+                                        ❌ <strong>Error:</strong> ${chunk.error_message}
+                                    </div>
+                                ` : ''}
                             </div>
                         </div>
                     `;
