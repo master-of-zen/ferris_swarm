@@ -1,0 +1,20 @@
+[server]
+bind_address = "0.0.0.0:3030"
+max_connections = 1000
+heartbeat_interval_seconds = 30
+node_timeout_seconds = 120
+client_timeout_seconds = 300
+
+[dashboard]
+title = "Ferris Swarm Constellation"
+refresh_interval_ms = 1000
+max_log_entries = 1000
+
+[monitoring]
+enable_metrics = true
+metrics_retention_hours = 24
+
+[monitoring.alert_thresholds]
+node_offline_minutes = 5
+job_stalled_minutes = 30
+chunk_failure_rate_percent = 10.0

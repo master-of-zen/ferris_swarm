@@ -50,7 +50,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn start_constellation(args: StartArgs) -> anyhow::Result<()> {
-    ferris_swarm::logging::init_logging(args.verbose)?;
+    ferris_swarm::logging::init_logging();
 
     let config = load_config(args.config).await?;
     

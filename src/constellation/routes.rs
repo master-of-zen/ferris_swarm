@@ -1,12 +1,10 @@
 use axum::{
-    extract::{Path, State, WebSocketUpgrade},
-    http::StatusCode,
-    response::{Html, Json},
+    extract::{State, WebSocketUpgrade},
+    response::Html,
     routing::{get, post, put},
     Router,
 };
 use tower_http::{cors::CorsLayer, services::ServeDir};
-use uuid::Uuid;
 
 use crate::constellation::{
     handlers::*,
@@ -36,7 +34,7 @@ pub fn create_router(state: ConstellationState) -> Router {
 }
 
 async fn dashboard() -> Html<&'static str> {
-    Html(include_str!("../../../static/dashboard.html"))
+    Html(include_str!("../../static/dashboard.html"))
 }
 
 async fn websocket_upgrade(

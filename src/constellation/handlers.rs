@@ -4,7 +4,7 @@ use axum::{
     response::Json,
 };
 use serde_json::json;
-use tracing::{error, info};
+use tracing::info;
 use uuid::Uuid;
 
 use crate::constellation::{

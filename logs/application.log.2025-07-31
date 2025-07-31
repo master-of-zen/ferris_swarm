@@ -1,0 +1,7 @@
+2025-07-31T21:59:35.230606Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation
+2025-07-31T21:59:51.978294Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation
+2025-07-31T22:00:16.327611Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation
+2025-07-31T22:00:27.610028Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation
+2025-07-31T22:02:36.653236Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation
+2025-07-31T22:06:33.096452Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation
+2025-07-31T22:18:17.002983Z  INFO main ThreadId(01) ferris_swarm::logging: src/logging.rs:51: Logging initialized with daily rotation

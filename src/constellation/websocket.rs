@@ -67,7 +67,7 @@ pub async fn websocket_handler(socket: WebSocket, state: ConstellationState) {
     info!("WebSocket connection closed");
 }
 
-async fn handle_websocket_message(message: serde_json::Value, state: &ConstellationState) {
+async fn handle_websocket_message(message: serde_json::Value, _state: &ConstellationState) {
     let msg_type = message.get("type").and_then(|v| v.as_str());
     
     match msg_type {

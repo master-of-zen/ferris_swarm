@@ -108,11 +108,11 @@ impl ConstellationState {
         };
 
         let mut chunks = self.chunks.write().await;
-        chunks.insert(chunk_id, assignment);
+        chunks.insert(chunk_id, assignment.clone());
 
         let mut nodes = self.nodes.write().await;
         if let Some(node) = nodes.get_mut(&node_id) {
-            node.current_chunks.push(assignment.clone());
+            node.current_chunks.push(assignment);
             info!("Assigned chunk {} to node {}", chunk_id, node_id);
             Some(chunk_id)
         } else {
@@ -164,11 +164,11 @@ impl ConstellationState {
         };
 
         let mut jobs = self.jobs.write().await;
-        jobs.insert(job_id, job_info);
+        jobs.insert(job_id, job_info.clone());
 
         let mut clients = self.clients.write().await;
         if let Some(client) = clients.get_mut(&client_id) {
-            client.active_jobs.push(job_info.clone());
+            client.active_jobs.push(job_info);
         }
 
         info!("Created new job: {} for client: {}", job_id, client_id);
