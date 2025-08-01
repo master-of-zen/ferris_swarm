@@ -6,11 +6,7 @@ use axum::{
 };
 use tower_http::{cors::CorsLayer, services::ServeDir};
 
-use crate::{
-    handlers::*,
-    state::ConstellationState,
-    websocket::websocket_handler,
-};
+use crate::{handlers::*, state::ConstellationState, websocket::websocket_handler};
 
 pub fn create_router(state: ConstellationState) -> Router {
     let api_routes = Router::new()

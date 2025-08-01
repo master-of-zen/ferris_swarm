@@ -1,8 +1,8 @@
 use anyhow::Result;
+use ferris_swarm_config::settings::{ConcatenatorChoice, Settings};
 use tracing::{debug, instrument, warn}; // Added warn
 
 use super::cli::Cli;
-use ferris_swarm_config::settings::{ConcatenatorChoice, Settings};
 
 #[instrument(skip(cli))]
 pub fn load_settings_with_cli_overrides(cli: &Cli) -> Result<Settings> {

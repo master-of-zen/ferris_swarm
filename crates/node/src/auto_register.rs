@@ -1,27 +1,25 @@
-use std::net::SocketAddr;
-use std::time::Duration;
+use std::{net::SocketAddr, time::Duration};
 
 use anyhow::{anyhow, Result};
+use ferris_swarm_core::{NodeCapabilities, NodeRegistration};
+use ferris_swarm_discovery::DiscoveryService;
 use serde::{Deserialize, Serialize};
 use tokio::time::{interval, sleep};
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use ferris_swarm_core::{NodeCapabilities, NodeRegistration};
-use ferris_swarm_discovery::DiscoveryService;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AutoRegisterConfig {
-    pub constellation_url: String,
-    pub node_name: String,
-    pub capabilities: NodeCapabilities,
+    pub constellation_url:  String,
+    pub node_name:          String,
+    pub capabilities:       NodeCapabilities,
     pub heartbeat_interval: Duration,
 }
 
 pub struct NodeAutoRegister {
-    config: AutoRegisterConfig,
-    client: reqwest::Client,
-    node_id: Option<Uuid>,
+    config:       AutoRegisterConfig,
+    client:       reqwest::Client,
+    node_id:      Option<Uuid>,
     node_address: SocketAddr,
 }
 
@@ -37,7 +35,7 @@ impl NodeAutoRegister {
 
     pub async fn register(&mut self) -> Result<Uuid> {
         let registration = NodeRegistration {
-            address: self.node_address,
+            address:      self.node_address,
             capabilities: self.config.capabilities.clone(),
         };
 
@@ -71,8 +69,8 @@ impl NodeAutoRegister {
             .as_str()
             .ok_or_else(|| anyhow!("No node_id in registration response"))?;
 
-        let node_id = Uuid::parse_str(node_id)
-            .map_err(|e| anyhow!("Invalid node_id format: {}", e))?;
+        let node_id =
+            Uuid::parse_str(node_id).map_err(|e| anyhow!("Invalid node_id format: {}", e))?;
 
         self.node_id = Some(node_id);
         info!("Successfully registered as node: {}", node_id);
@@ -82,7 +80,7 @@ impl NodeAutoRegister {
 
     pub async fn start_heartbeat_service(self) -> Result<()> {
         let node_id = self.node_id.ok_or_else(|| anyhow!("Node not registered yet"))?;
-        
+
         info!(
             "Starting heartbeat service for node {} (interval: {}s)",
             node_id,
@@ -96,7 +94,7 @@ impl NodeAutoRegister {
 
             if let Err(e) = self.send_heartbeat(node_id).await {
                 warn!("Heartbeat failed: {}", e);
-                
+
                 // Try to re-register if heartbeat fails multiple times
                 if let Err(re_register_err) = self.try_reregister().await {
                     error!("Re-registration failed: {}", re_register_err);
@@ -128,7 +126,10 @@ impl NodeAutoRegister {
             .await?;
 
         if !response.status().is_success() {
-            return Err(anyhow!("Heartbeat failed with status: {}", response.status()));
+            return Err(anyhow!(
+                "Heartbeat failed with status: {}",
+                response.status()
+            ));
         }
 
         Ok(())
@@ -136,11 +137,11 @@ impl NodeAutoRegister {
 
     async fn try_reregister(&self) -> Result<()> {
         info!("Attempting to re-register with constellation...");
-        
+
         // Create a new instance for re-registration
         let mut new_register = Self::new(self.config.clone(), self.node_address);
         new_register.register().await?;
-        
+
         Ok(())
     }
 
@@ -157,13 +158,13 @@ impl NodeAutoRegister {
         heartbeat_interval: Duration,
     ) -> Result<AutoRegisterConfig> {
         let discovery_service = DiscoveryService::new();
-        
+
         info!("Attempting to discover constellation service via mDNS...");
-        
+
         match discovery_service.discover_constellation().await {
             Ok(constellation_info) => {
                 info!("Discovered constellation at: {}", constellation_info.url);
-                
+
                 let node_name = node_name.unwrap_or_else(|| {
                     hostname::get()
                         .map(|h| h.to_string_lossy().to_string())
@@ -176,11 +177,11 @@ impl NodeAutoRegister {
                     capabilities,
                     heartbeat_interval,
                 })
-            }
+            },
             Err(e) => {
                 error!("Failed to discover constellation via mDNS: {}", e);
                 Err(anyhow!("Constellation discovery failed: {}", e))
-            }
+            },
         }
     }
 
@@ -208,18 +209,27 @@ impl NodeAutoRegister {
         }
 
         // Try mDNS discovery first
-        match Self::create_with_discovery(node_name.clone(), capabilities.clone(), heartbeat_interval).await {
+        match Self::create_with_discovery(
+            node_name.clone(),
+            capabilities.clone(),
+            heartbeat_interval,
+        )
+        .await
+        {
             Ok(config) => {
                 info!("Using constellation discovered via mDNS");
                 Ok(config)
-            }
+            },
             Err(discovery_err) => {
                 warn!("mDNS discovery failed: {}", discovery_err);
-                
+
                 // Fallback to default local constellation
                 let fallback_url = "http://localhost:3030".to_string();
-                warn!("Falling back to default constellation URL: {}", fallback_url);
-                
+                warn!(
+                    "Falling back to default constellation URL: {}",
+                    fallback_url
+                );
+
                 let node_name = node_name.unwrap_or_else(|| {
                     hostname::get()
                         .map(|h| h.to_string_lossy().to_string())
@@ -232,7 +242,7 @@ impl NodeAutoRegister {
                     capabilities,
                     heartbeat_interval,
                 })
-            }
+            },
         }
     }
 }
@@ -244,23 +254,16 @@ pub fn detect_node_capabilities(
     encoders_override: Option<String>,
 ) -> Result<NodeCapabilities> {
     let cpu_cores = cpu_cores_override.unwrap_or_else(|| num_cpus::get() as u32);
-    
-    let memory_gb = memory_gb_override.unwrap_or_else(|| {
-        detect_system_memory_gb().unwrap_or(8)
-    });
+
+    let memory_gb = memory_gb_override.unwrap_or_else(|| detect_system_memory_gb().unwrap_or(8));
 
     let supported_encoders = if let Some(encoders_str) = encoders_override {
-        encoders_str
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .collect()
+        encoders_str.split(',').map(|s| s.trim().to_string()).collect()
     } else {
         detect_available_encoders()
     };
 
-    let max_concurrent_chunks = max_chunks_override.unwrap_or_else(|| {
-        (cpu_cores / 2).max(1)
-    });
+    let max_concurrent_chunks = max_chunks_override.unwrap_or_else(|| (cpu_cores / 2).max(1));
 
     Ok(NodeCapabilities {
         max_concurrent_chunks,
@@ -273,18 +276,16 @@ pub fn detect_node_capabilities(
 fn detect_system_memory_gb() -> Option<u32> {
     #[cfg(target_os = "linux")]
     {
-        std::fs::read_to_string("/proc/meminfo")
-            .ok()
-            .and_then(|content| {
-                content
-                    .lines()
-                    .find(|line| line.starts_with("MemTotal:"))
-                    .and_then(|line| line.split_whitespace().nth(1))
-                    .and_then(|kb| kb.parse::<u64>().ok())
-                    .map(|kb| (kb / 1024 / 1024) as u32)
-            })
+        std::fs::read_to_string("/proc/meminfo").ok().and_then(|content| {
+            content
+                .lines()
+                .find(|line| line.starts_with("MemTotal:"))
+                .and_then(|line| line.split_whitespace().nth(1))
+                .and_then(|kb| kb.parse::<u64>().ok())
+                .map(|kb| (kb / 1024 / 1024) as u32)
+        })
     }
-    
+
     #[cfg(not(target_os = "linux"))]
     {
         // For non-Linux systems, could implement using sysinfo crate
@@ -294,7 +295,7 @@ fn detect_system_memory_gb() -> Option<u32> {
 
 fn detect_available_encoders() -> Vec<String> {
     let mut encoders = Vec::new();
-    
+
     // Check for common encoders by trying to get their help
     let potential_encoders = [
         ("libx264", "h264"),
@@ -321,9 +322,7 @@ fn check_encoder_available(encoder_name: &str) -> bool {
     std::process::Command::new("ffmpeg")
         .args(["-hide_banner", "-encoders"])
         .output()
-        .map(|output| {
-            String::from_utf8_lossy(&output.stdout).contains(encoder_name)
-        })
+        .map(|output| String::from_utf8_lossy(&output.stdout).contains(encoder_name))
         .unwrap_or(false)
 }
 

@@ -1,15 +1,14 @@
 use std::{path::Path, sync::Arc};
 
 use anyhow::{Context, Result};
-use tokio::sync::Semaphore;
-use tonic::transport::Channel;
-use tracing::{debug, error, info, instrument, warn};
-
 use ferris_swarm_core::chunk::Chunk;
 use ferris_swarm_proto::protos::video_encoding::{
     video_encoding_service_client::VideoEncodingServiceClient,
     EncodeChunkRequest,
 };
+use tokio::sync::Semaphore;
+use tonic::transport::Channel;
+use tracing::{debug, error, info, instrument, warn};
 
 const MAX_MESSAGE_SIZE_BYTES: usize = 1 * 1024 * 1024 * 1024; // 1 GB
 

@@ -1,8 +1,5 @@
 use std::{fs, path::PathBuf};
 
-use tonic::{Request, Response, Status};
-use tracing::{debug, error, info, instrument, warn};
-
 use ferris_swarm_core::chunk::Chunk;
 use ferris_swarm_proto::protos::video_encoding::{
     video_encoding_service_server::VideoEncodingService,
@@ -10,6 +7,8 @@ use ferris_swarm_proto::protos::video_encoding::{
     EncodeChunkResponse,
 };
 use ferris_swarm_video::ChunkEncoder;
+use tonic::{Request, Response, Status};
+use tracing::{debug, error, info, instrument, warn};
 
 /// Implements the gRPC VideoEncodingService for a node.
 #[derive(Debug)]
@@ -97,7 +96,8 @@ impl VideoEncodingService for NodeEncodingService {
             temp_input_path.clone(), // Path to the data just saved by node
             req.chunk_index as usize,
             req.encoder_parameters.clone(), // Use parameters from request
-        ).map_err(|e| {
+        )
+        .map_err(|e| {
             error!("Node: Failed to create chunk: {}", e);
             Status::internal("Failed to create chunk")
         })?;

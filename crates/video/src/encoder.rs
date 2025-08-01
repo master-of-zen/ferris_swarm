@@ -1,8 +1,7 @@
 use std::{path::Path, process::Command};
 
-use tracing::{debug, error, instrument};
-
 use ferris_swarm_core::error::VideoEncodeError;
+use tracing::{debug, error, instrument};
 
 #[instrument(skip(encoder_parameters))]
 pub fn encode_with_ffmpeg(

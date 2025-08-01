@@ -1,9 +1,9 @@
 use std::{fs, path::PathBuf};
 
+use ferris_swarm_core::error::VideoEncodeError;
 use sha2::{Digest, Sha256};
 use tracing::{debug, instrument}; // Removed error, info
 
-use ferris_swarm_core::error::VideoEncodeError;
 use crate::settings::Settings;
 
 /// Configuration for the video encoding system's temporary files for a specific

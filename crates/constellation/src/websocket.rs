@@ -1,5 +1,8 @@
 use axum::extract::ws::{Message, WebSocket};
-use futures::{stream::SplitSink, stream::SplitStream, stream::StreamExt, sink::SinkExt};
+use futures::{
+    sink::SinkExt,
+    stream::{SplitSink, SplitStream, StreamExt},
+};
 use serde_json::json;
 use tokio::time::{interval, Duration};
 use tracing::{debug, error, info, warn};
@@ -8,22 +11,24 @@ use crate::state::ConstellationState;
 
 pub async fn websocket_handler(socket: WebSocket, state: ConstellationState) {
     info!("New WebSocket connection established");
-    
+
     let (mut sender, mut receiver) = socket.split();
     let state_clone = state.clone();
 
     let send_task = tokio::spawn(async move {
-        let mut interval = interval(Duration::from_millis(state_clone.config.dashboard.refresh_interval_ms));
-        
+        let mut interval = interval(Duration::from_millis(
+            state_clone.config.dashboard.refresh_interval_ms,
+        ));
+
         loop {
             interval.tick().await;
-            
+
             let dashboard_data = state_clone.get_dashboard_data().await;
             let message = json!({
                 "type": "dashboard_update",
                 "data": dashboard_data
             });
-            
+
             if let Ok(text) = serde_json::to_string(&message) {
                 if sender.send(Message::Text(text)).await.is_err() {
                     debug!("WebSocket send failed, client disconnected");
@@ -50,7 +55,7 @@ pub async fn websocket_handler(socket: WebSocket, state: ConstellationState) {
                     error!("WebSocket error: {}", e);
                     break;
                 },
-                _ => {}
+                _ => {},
             }
         }
     });
@@ -69,7 +74,7 @@ pub async fn websocket_handler(socket: WebSocket, state: ConstellationState) {
 
 async fn handle_websocket_message(message: serde_json::Value, _state: &ConstellationState) {
     let msg_type = message.get("type").and_then(|v| v.as_str());
-    
+
     match msg_type {
         Some("ping") => {
             debug!("Received ping from WebSocket client");
@@ -84,6 +89,6 @@ async fn handle_websocket_message(message: serde_json::Value, _state: &Constella
         },
         _ => {
             warn!("Unknown WebSocket message type: {:?}", msg_type);
-        }
+        },
     }
 }

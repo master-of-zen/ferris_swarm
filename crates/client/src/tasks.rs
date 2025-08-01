@@ -1,12 +1,12 @@
 use std::{path::PathBuf, sync::Arc};
 
 use anyhow::Result;
+use ferris_swarm_core::chunk::Chunk;
 use futures::stream::{FuturesUnordered, StreamExt};
 use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument};
 
 use super::comms::{send_chunk_for_encoding, NodeConnection};
-use ferris_swarm_core::chunk::Chunk;
 
 /// Manages the state of chunks during the encoding process.
 #[derive(Debug)]

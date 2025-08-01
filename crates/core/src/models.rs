@@ -6,15 +6,15 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NodeCapabilities {
     pub max_concurrent_chunks: u32,
-    pub supported_encoders: Vec<String>,
-    pub cpu_cores: u32,
-    pub memory_gb: u32,
+    pub supported_encoders:    Vec<String>,
+    pub cpu_cores:             u32,
+    pub memory_gb:             u32,
 }
 
 /// Node registration request
 #[derive(Debug, Serialize, Deserialize)]
 pub struct NodeRegistration {
-    pub address: SocketAddr,
+    pub address:      SocketAddr,
     pub capabilities: NodeCapabilities,
 }
 

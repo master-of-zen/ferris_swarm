@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use tracing::{debug, info, instrument};
-
 use ferris_swarm_core::error::VideoEncodeError;
 use ferris_swarm_video as ffmpeg;
+use tracing::{debug, info, instrument};
 
 #[instrument]
 pub fn split_video_into_segments(

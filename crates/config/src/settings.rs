@@ -14,7 +14,12 @@ impl Default for ClientSettings {
     fn default() -> Self {
         Self {
             node_addresses: vec!["127.0.0.1:50051".to_string()],
-            encoder_params: vec!["-c:v".to_string(), "libx264".to_string(), "-crf".to_string(), "23".to_string()],
+            encoder_params: vec![
+                "-c:v".to_string(),
+                "libx264".to_string(),
+                "-crf".to_string(),
+                "23".to_string(),
+            ],
         }
     }
 }
@@ -28,7 +33,7 @@ pub struct NodeSettings {
 impl Default for NodeSettings {
     fn default() -> Self {
         Self {
-            address: "0.0.0.0:50051".to_string(),
+            address:  "0.0.0.0:50051".to_string(),
             temp_dir: std::env::temp_dir().join("ferris_swarm_node"),
         }
     }
@@ -60,8 +65,8 @@ impl Default for ProcessingSettings {
     fn default() -> Self {
         Self {
             segment_duration: 10.0, // 10 seconds per segment
-            temp_dir: std::env::temp_dir().join("ferris_swarm_processing"),
-            concatenator: ConcatenatorChoice::default(),
+            temp_dir:         std::env::temp_dir().join("ferris_swarm_processing"),
+            concatenator:     ConcatenatorChoice::default(),
         }
     }
 }
@@ -79,8 +84,8 @@ pub struct Settings {
 impl Default for Settings {
     fn default() -> Self {
         Self {
-            client: ClientSettings::default(),
-            node: NodeSettings::default(),
+            client:     ClientSettings::default(),
+            node:       NodeSettings::default(),
             processing: ProcessingSettings::default(),
         }
     }
@@ -100,19 +105,22 @@ impl Settings {
             .build()?;
 
         debug!("Loaded settings configuration: {:?}", config);
-        
+
         // If config is empty (no file found), return defaults
         let settings = match config.try_deserialize::<Settings>() {
             Ok(settings) => {
                 debug!("Successfully loaded settings from config file");
                 settings
-            }
+            },
             Err(e) => {
-                debug!("No config file found or failed to parse, using defaults: {}", e);
+                debug!(
+                    "No config file found or failed to parse, using defaults: {}",
+                    e
+                );
                 Settings::default()
-            }
+            },
         };
-        
+
         Ok(settings)
     }
 }

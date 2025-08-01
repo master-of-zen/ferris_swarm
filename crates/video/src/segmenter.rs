@@ -5,9 +5,9 @@ use std::{
     process::Command,
 };
 
+use ferris_swarm_core::error::VideoEncodeError;
 use tracing::{debug, error, info, instrument};
 
-use ferris_swarm_core::error::VideoEncodeError;
 use crate::utils::verify_ffmpeg;
 
 /// Due to the nature of method -segment_time

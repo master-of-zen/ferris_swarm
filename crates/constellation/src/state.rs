@@ -1,69 +1,75 @@
-use std::collections::HashMap;
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use chrono::Utc;
-use tokio::sync::RwLock;
-use tokio::time::{interval, Duration};
+use tokio::{
+    sync::RwLock,
+    time::{interval, Duration},
+};
 use tracing::{debug, info, warn};
 use uuid::Uuid;
 
-use crate::config::ConstellationConfig;
-use crate::models::*;
+use crate::{config::ConstellationConfig, models::*};
 
 #[derive(Debug, Clone)]
 pub struct ConstellationState {
-    pub nodes: Arc<RwLock<HashMap<Uuid, NodeInfo>>>,
+    pub nodes:   Arc<RwLock<HashMap<Uuid, NodeInfo>>>,
     pub clients: Arc<RwLock<HashMap<Uuid, ClientInfo>>>,
-    pub jobs: Arc<RwLock<HashMap<Uuid, JobInfo>>>,
-    pub chunks: Arc<RwLock<HashMap<Uuid, ChunkAssignment>>>,
-    pub config: Arc<ConstellationConfig>,
+    pub jobs:    Arc<RwLock<HashMap<Uuid, JobInfo>>>,
+    pub chunks:  Arc<RwLock<HashMap<Uuid, ChunkAssignment>>>,
+    pub config:  Arc<ConstellationConfig>,
 }
 
 impl ConstellationState {
     pub fn new(config: ConstellationConfig) -> Self {
         Self {
-            nodes: Arc::new(RwLock::new(HashMap::new())),
+            nodes:   Arc::new(RwLock::new(HashMap::new())),
             clients: Arc::new(RwLock::new(HashMap::new())),
-            jobs: Arc::new(RwLock::new(HashMap::new())),
-            chunks: Arc::new(RwLock::new(HashMap::new())),
-            config: Arc::new(config),
+            jobs:    Arc::new(RwLock::new(HashMap::new())),
+            chunks:  Arc::new(RwLock::new(HashMap::new())),
+            config:  Arc::new(config),
         }
     }
 
     pub async fn register_node(&self, registration: NodeRegistration) -> Uuid {
         let node_id = Uuid::new_v4();
         let node_info = NodeInfo {
-            id: node_id,
-            address: registration.address,
-            status: NodeStatus::Online,
-            last_heartbeat: Utc::now(),
-            capabilities: registration.capabilities,
-            current_chunks: Vec::new(),
+            id:              node_id,
+            address:         registration.address,
+            status:          NodeStatus::Online,
+            last_heartbeat:  Utc::now(),
+            capabilities:    registration.capabilities,
+            current_chunks:  Vec::new(),
             total_processed: 0,
-            total_failed: 0,
+            total_failed:    0,
         };
 
         let mut nodes = self.nodes.write().await;
         nodes.insert(node_id, node_info);
-        info!("Registered new node: {} at {}", node_id, registration.address);
-        
+        info!(
+            "Registered new node: {} at {}",
+            node_id, registration.address
+        );
+
         node_id
     }
 
     pub async fn register_client(&self, registration: ClientRegistration) -> Uuid {
         let client_id = Uuid::new_v4();
         let client_info = ClientInfo {
-            id: client_id,
-            address: registration.address,
-            status: ClientStatus::Connected,
+            id:             client_id,
+            address:        registration.address,
+            status:         ClientStatus::Connected,
             last_heartbeat: Utc::now(),
-            active_jobs: Vec::new(),
+            active_jobs:    Vec::new(),
         };
 
         let mut clients = self.clients.write().await;
         clients.insert(client_id, client_info);
-        info!("Registered new client: {} at {}", client_id, registration.address);
-        
+        info!(
+            "Registered new client: {} at {}",
+            client_id, registration.address
+        );
+
         client_id
     }
 
@@ -75,7 +81,10 @@ impl ConstellationState {
             debug!("Updated heartbeat for node: {}", node_id);
             true
         } else {
-            warn!("Attempted to update heartbeat for unknown node: {}", node_id);
+            warn!(
+                "Attempted to update heartbeat for unknown node: {}",
+                node_id
+            );
             false
         }
     }
@@ -88,12 +97,20 @@ impl ConstellationState {
             debug!("Updated heartbeat for client: {}", client_id);
             true
         } else {
-            warn!("Attempted to update heartbeat for unknown client: {}", client_id);
+            warn!(
+                "Attempted to update heartbeat for unknown client: {}",
+                client_id
+            );
             false
         }
     }
 
-    pub async fn assign_chunk(&self, job_id: Uuid, chunk_index: u32, node_id: Uuid) -> Option<Uuid> {
+    pub async fn assign_chunk(
+        &self,
+        job_id: Uuid,
+        chunk_index: u32,
+        node_id: Uuid,
+    ) -> Option<Uuid> {
         let chunk_id = Uuid::new_v4();
         let assignment = ChunkAssignment {
             chunk_id,
@@ -127,7 +144,7 @@ impl ConstellationState {
         if let Some(chunk) = chunks.get_mut(&chunk_id) {
             chunk.status = update.status.clone();
             chunk.progress_percent = update.progress_percent;
-            
+
             match update.status {
                 ChunkStatus::InProgress => {
                     if chunk.started_at.is_none() {
@@ -137,7 +154,7 @@ impl ConstellationState {
                 ChunkStatus::Completed | ChunkStatus::Failed(_) | ChunkStatus::Cancelled => {
                     chunk.completed_at = Some(Utc::now());
                 },
-                _ => {}
+                _ => {},
             }
 
             debug!("Updated chunk {} status to {:?}", chunk_id, update.status);
@@ -148,7 +165,12 @@ impl ConstellationState {
         }
     }
 
-    pub async fn create_job(&self, client_id: Uuid, video_file: String, encoder_parameters: Vec<String>) -> Uuid {
+    pub async fn create_job(
+        &self,
+        client_id: Uuid,
+        video_file: String,
+        encoder_parameters: Vec<String>,
+    ) -> Uuid {
         let job_id = Uuid::new_v4();
         let job_info = JobInfo {
             id: job_id,
@@ -201,25 +223,25 @@ impl ConstellationState {
         chunks: &HashMap<Uuid, ChunkAssignment>,
     ) -> SystemStats {
         let total_nodes = nodes.len() as u32;
-        let active_nodes = nodes.values()
+        let active_nodes = nodes
+            .values()
             .filter(|n| matches!(n.status, NodeStatus::Online | NodeStatus::Busy))
             .count() as u32;
 
         let total_clients = clients.len() as u32;
-        let active_jobs = jobs.values()
+        let active_jobs = jobs
+            .values()
             .filter(|j| matches!(j.status, JobStatus::InProgress | JobStatus::Queued))
             .count() as u32;
 
-        let total_chunks_processed = nodes.values()
-            .map(|n| n.total_processed)
-            .sum::<u64>();
+        let total_chunks_processed = nodes.values().map(|n| n.total_processed).sum::<u64>();
 
-        let completed_chunks: Vec<_> = chunks.values()
-            .filter(|c| matches!(c.status, ChunkStatus::Completed))
-            .collect();
+        let completed_chunks: Vec<_> =
+            chunks.values().filter(|c| matches!(c.status, ChunkStatus::Completed)).collect();
 
         let average_chunk_time = if !completed_chunks.is_empty() {
-            let total_time: f64 = completed_chunks.iter()
+            let total_time: f64 = completed_chunks
+                .iter()
                 .filter_map(|c| {
                     if let (Some(started), Some(completed)) = (c.started_at, c.completed_at) {
                         Some((completed - started).num_milliseconds() as f64 / 1000.0)
@@ -249,7 +271,7 @@ impl ConstellationState {
     pub fn start_cleanup_task(self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(60));
-            
+
             loop {
                 interval.tick().await;
                 self.cleanup_stale_entries().await;
@@ -264,7 +286,8 @@ impl ConstellationState {
 
         {
             let mut nodes = self.nodes.write().await;
-            let stale_nodes: Vec<Uuid> = nodes.iter()
+            let stale_nodes: Vec<Uuid> = nodes
+                .iter()
                 .filter(|(_, node)| {
                     (now - node.last_heartbeat).to_std().unwrap_or_default() > node_timeout
                 })
@@ -282,7 +305,8 @@ impl ConstellationState {
 
         {
             let mut clients = self.clients.write().await;
-            let stale_clients: Vec<Uuid> = clients.iter()
+            let stale_clients: Vec<Uuid> = clients
+                .iter()
                 .filter(|(_, client)| {
                     (now - client.last_heartbeat).to_std().unwrap_or_default() > client_timeout
                 })

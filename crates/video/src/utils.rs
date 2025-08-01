@@ -1,6 +1,5 @@
-use tracing::{debug, error, info, instrument};
-
 use ferris_swarm_core::error::VideoEncodeError;
+use tracing::{debug, error, info, instrument};
 
 #[instrument]
 pub fn verify_ffmpeg() -> Result<(), VideoEncodeError> {

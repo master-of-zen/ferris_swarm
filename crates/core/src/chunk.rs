@@ -14,11 +14,15 @@ pub struct Chunk {
 }
 
 impl Chunk {
-    pub fn new(source_path: PathBuf, index: usize, encoder_parameters: Vec<String>) -> Result<Self, VideoEncodeError> {
+    pub fn new(
+        source_path: PathBuf,
+        index: usize,
+        encoder_parameters: Vec<String>,
+    ) -> Result<Self, VideoEncodeError> {
         if !source_path.exists() {
             return Err(VideoEncodeError::Io(std::io::Error::new(
                 std::io::ErrorKind::NotFound,
-                format!("Source path does not exist: {:?}", source_path)
+                format!("Source path does not exist: {:?}", source_path),
             )));
         }
 
@@ -38,9 +42,9 @@ impl Chunk {
     /// Creates a new chunk with the encoded path set
     pub fn with_encoded_path(&self, encoded_path: PathBuf) -> Self {
         Chunk {
-            source_path: self.source_path.clone(),
-            encoded_path: Some(encoded_path),
-            index: self.index,
+            source_path:        self.source_path.clone(),
+            encoded_path:       Some(encoded_path),
+            index:              self.index,
             encoder_parameters: self.encoder_parameters.clone(),
         }
     }
@@ -51,7 +55,7 @@ pub fn convert_files_to_chunks(
     encoder_params: Vec<String>,
 ) -> Result<Vec<Chunk>, VideoEncodeError> {
     let mut chunks = Vec::new();
-    
+
     for (index, path) in segments.into_iter().enumerate() {
         let chunk = Chunk::new(path, index, encoder_params.clone())?;
         chunks.push(chunk);

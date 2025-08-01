@@ -3,7 +3,15 @@ use std::path::PathBuf;
 use clap::Parser;
 
 #[derive(Parser, Debug, Clone)]
-#[command(author, version, about = "Ferris Swarm Node: Zero-config distributed video encoding node with automatic constellation discovery.", long_about = "Ferris Swarm Node automatically discovers and registers with constellation services on the local network. Auto-registration and heartbeat are enabled by default for true plug-and-play operation.")]
+#[command(
+    author,
+    version,
+    about = "Ferris Swarm Node: Zero-config distributed video encoding node with automatic \
+             constellation discovery.",
+    long_about = "Ferris Swarm Node automatically discovers and registers with constellation \
+                  services on the local network. Auto-registration and heartbeat are enabled by \
+                  default for true plug-and-play operation."
+)]
 pub struct Cli {
     /// Path to the configuration file (e.g., config.toml)
     #[arg(short, long)]
@@ -24,7 +32,11 @@ pub struct Cli {
     pub no_auto_register: bool,
 
     /// Constellation URL for auto-registration
-    #[arg(long, help = "Constellation URL (optional if using mDNS discovery)", env = "CONSTELLATION_URL")]
+    #[arg(
+        long,
+        help = "Constellation URL (optional if using mDNS discovery)",
+        env = "CONSTELLATION_URL"
+    )]
     pub constellation_url: Option<String>,
 
     /// Node name for registration (defaults to hostname)
@@ -57,12 +69,14 @@ pub struct Cli {
 }
 
 impl Cli {
-    /// Check if auto-registration should be enabled (default: true, unless --no-auto-register)
+    /// Check if auto-registration should be enabled (default: true, unless
+    /// --no-auto-register)
     pub fn should_auto_register(&self) -> bool {
         !self.no_auto_register
     }
 
-    /// Check if heartbeat should be enabled (default: true, unless --no-heartbeat)
+    /// Check if heartbeat should be enabled (default: true, unless
+    /// --no-heartbeat)
     pub fn should_enable_heartbeat(&self) -> bool {
         !self.no_heartbeat
     }

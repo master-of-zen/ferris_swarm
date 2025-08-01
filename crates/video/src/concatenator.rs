@@ -4,9 +4,8 @@ use std::{
     process::Command,
 };
 
-use tracing::{debug, error, info, instrument};
-
 use ferris_swarm_core::error::VideoEncodeError;
+use tracing::{debug, error, info, instrument};
 
 /// Concatenates video segments using FFmpeg and adds back non-video streams.
 #[instrument(skip(segment_paths, non_video_stream_file))]
