@@ -1,0 +1,2 @@
+2025-08-01T18:30:45.548119Z  INFO integration::distributed_encoding::test_distributed_job_coordination ThreadId(03) ferris_swarm_logging::logging: crates/logging/src/logging.rs:51: Logging initialized with daily rotation
+2025-08-01T18:30:54.406662Z  INFO unit::core::test_chunk_mock_data ThreadId(15) ferris_swarm_logging::logging: crates/logging/src/logging.rs:51: Logging initialized with daily rotation

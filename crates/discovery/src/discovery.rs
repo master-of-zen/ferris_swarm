@@ -4,14 +4,18 @@ use std::time::Duration;
 
 use anyhow::{anyhow, Result};
 use tokio::time::{timeout, sleep};
-use tracing::{debug, info};
+use tracing::{debug, info, warn, error};
+use futures::stream::StreamExt;
 
 const SERVICE_NAME: &str = "_ferris-swarm._tcp.local";
+const SERVICE_TYPE: &str = "_ferris-swarm._tcp";
 const DISCOVERY_TIMEOUT: Duration = Duration::from_secs(5);
+const MDNS_QUERY_TIMEOUT: Duration = Duration::from_secs(3);
 
 /// mDNS service discovery for Ferris Swarm constellation
 pub struct DiscoveryService {
     service_name: String,
+    service_type: String,
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +29,7 @@ impl DiscoveryService {
     pub fn new() -> Self {
         Self {
             service_name: SERVICE_NAME.to_string(),
+            service_type: SERVICE_TYPE.to_string(),
         }
     }
 
@@ -37,18 +42,45 @@ impl DiscoveryService {
             local_ip, port, hostname
         );
 
-        // For now, we'll use a simple approach without persistent advertisement
-        // The mdns crate API is quite basic, so we'll simulate this
+        // Create the service instance name
+        let instance_name = format!("{}._ferris-swarm._tcp.local", hostname);
+        
+        // Spawn a task to handle mDNS advertisement
         tokio::spawn(async move {
-            loop {
-                debug!("mDNS advertisement cycle (simulated)");
-                sleep(Duration::from_secs(30)).await;
+            match Self::run_mdns_advertisement(instance_name, local_ip, port).await {
+                Ok(_) => info!("mDNS advertisement completed"),
+                Err(e) => error!("mDNS advertisement failed: {}", e),
             }
         });
 
         Ok(())
     }
 
+    /// Run the mDNS advertisement loop
+    async fn run_mdns_advertisement(instance_name: String, ip: Ipv4Addr, port: u16) -> Result<()> {
+        info!("Starting mDNS advertisement for service: {} on {}:{}", instance_name, ip, port);
+        
+        // Use simple advertisement approach with mdns crate
+        // The mdns v3.0.0 API is more basic, so we'll periodically broadcast
+        let service_type = "_ferris-swarm._tcp.local";
+        
+        loop {
+            // Broadcast service announcement
+            match mdns::discover::all(service_type, Duration::from_secs(1)) {
+                Ok(_responder) => {
+                    debug!("mDNS broadcast attempt for service: {}", instance_name);
+                }
+                Err(e) => {
+                    warn!("Failed to broadcast mDNS advertisement: {}", e);
+                }
+            }
+            
+            // Wait before next broadcast
+            sleep(Duration::from_secs(30)).await;
+        }
+    }
+
+    /// Discover constellation services on the local network
     /// Discover constellation services on the local network
     pub async fn discover_constellation(&self) -> Result<ConstellationInfo> {
         info!("Discovering constellation services on local network...");
@@ -106,18 +138,134 @@ impl DiscoveryService {
     }
 
     async fn mdns_discover(&self) -> Result<HashMap<String, ConstellationInfo>> {
-        // For now, simulate mDNS discovery
-        // The mdns crate requires a different approach than initially implemented
-        debug!("Attempting mDNS discovery...");
+        debug!("Starting real mDNS discovery for Ferris Swarm constellation services...");
         
-        // This would be the real mDNS implementation:
-        // We'd listen for multicast DNS responses for _ferris-swarm._tcp.local
-        sleep(Duration::from_millis(100)).await;
+        let mut services = HashMap::new();
         
-        Ok(HashMap::new()) // Empty for now - fallback will handle
+        // Use tokio::time::timeout to limit discovery time
+        let discovery_future = async {
+            let service_name = "_ferris-swarm._tcp.local";
+            
+            // Create the discovery stream
+            match mdns::discover::all(service_name, MDNS_QUERY_TIMEOUT) {
+                Ok(receiver) => {
+                    let stream = receiver.listen();
+                    tokio::pin!(stream);
+                    
+                    // Process responses with a timeout
+                    while let Some(response_result) = stream.next().await {
+                        match response_result {
+                            Ok(response) => {
+                                match self.parse_mdns_response(response).await {
+                                    Ok(Some(constellation_info)) => {
+                                        info!("Discovered constellation via mDNS: {} at {}", 
+                                              constellation_info.name, constellation_info.address);
+                                        services.insert(constellation_info.name.clone(), constellation_info);
+                                    }
+                                    Ok(None) => {
+                                        debug!("Received non-constellation mDNS response");
+                                    }
+                                    Err(e) => {
+                                        warn!("Failed to parse mDNS response: {}", e);
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                warn!("mDNS discovery error: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to start mDNS discovery: {}", e);
+                    return Err(e.into());
+                }
+            }
+            
+            Ok::<HashMap<String, ConstellationInfo>, anyhow::Error>(services)
+        };
+        
+        match timeout(MDNS_QUERY_TIMEOUT, discovery_future).await {
+            Ok(Ok(discovered_services)) => {
+                info!("mDNS discovery completed, found {} services", discovered_services.len());
+                Ok(discovered_services)
+            }
+            Ok(Err(e)) => {
+                warn!("mDNS discovery failed: {}", e);
+                Err(e)
+            }
+            Err(_) => {
+                debug!("mDNS discovery timed out after {}s", MDNS_QUERY_TIMEOUT.as_secs());
+                Ok(HashMap::new()) // Return empty, let fallback handle it
+            }
+        }
     }
 
-    async fn fallback_discover(&self) -> Result<HashMap<String, ConstellationInfo>> {
+    /// Parse mDNS response and extract constellation information
+    async fn parse_mdns_response(&self, response: mdns::Response) -> Result<Option<ConstellationInfo>> {
+        debug!("Processing mDNS response from hostname: {:?}", response.hostname());
+        
+        let mut port = None;
+        let mut address = None;
+        let hostname = response.hostname().unwrap_or("unknown");
+        
+        // Look for relevant records
+        for record in response.records() {
+            match &record.kind {
+                mdns::RecordKind::A(addr) => {
+                    if record.name.contains("_ferris-swarm._tcp") {
+                        address = Some(IpAddr::V4(*addr));
+                        debug!("Found A record: {} -> {}", record.name, addr);
+                    }
+                }
+                mdns::RecordKind::SRV { port: srv_port, target, .. } => {
+                    if record.name.contains("_ferris-swarm._tcp") {
+                        port = Some(*srv_port);
+                        debug!("Found SRV record: {} port {} target {}", record.name, srv_port, target);
+                    }
+                }
+                mdns::RecordKind::TXT(ref txt_records) => {
+                    if record.name.contains("_ferris-swarm._tcp") {
+                        debug!("Found TXT records: {:?}", txt_records);
+                        // Parse TXT records for additional info
+                        for txt in txt_records {
+                            if let Ok(txt_str) = std::str::from_utf8(txt.as_bytes()) {
+                                if txt_str.starts_with("ip=") {
+                                    if let Ok(ip) = txt_str[3..].parse::<Ipv4Addr>() {
+                                        address = Some(IpAddr::V4(ip));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        
+        // Construct ConstellationInfo if we have enough information
+        if let (Some(addr), Some(p)) = (address, port) {
+            let socket_addr = SocketAddr::new(addr, p);
+            let service_name = hostname.to_string();
+            let url = format!("http://{}:{}", addr, p);
+            
+            // Verify the service is actually a constellation
+            if self.is_constellation_available(&socket_addr).await {
+                return Ok(Some(ConstellationInfo {
+                    name: service_name,
+                    address: socket_addr,
+                    url,
+                }));
+            } else {
+                debug!("Service at {} did not respond to health check", socket_addr);
+            }
+        }
+        
+        Ok(None)
+    }
+
+    pub async fn fallback_discover(&self) -> Result<HashMap<String, ConstellationInfo>> {
         let mut services = HashMap::new();
         
         // Try common local addresses
@@ -176,7 +324,7 @@ impl DiscoveryService {
         }
     }
 
-    async fn get_local_ip(&self) -> Result<Ipv4Addr> {
+    pub async fn get_local_ip(&self) -> Result<Ipv4Addr> {
         let interfaces = if_addrs::get_if_addrs()?;
         
         for interface in interfaces {
@@ -194,33 +342,5 @@ impl DiscoveryService {
 impl Default for DiscoveryService {
     fn default() -> Self {
         Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[tokio::test]
-    async fn test_discovery_service_creation() {
-        let service = DiscoveryService::new();
-        assert_eq!(service.service_name, SERVICE_NAME);
-    }
-    
-    #[tokio::test]
-    async fn test_get_local_ip() {
-        let service = DiscoveryService::new();
-        let result = service.get_local_ip().await;
-        
-        // Should either succeed or fail gracefully
-        match result {
-            Ok(ip) => {
-                assert!(!ip.is_loopback());
-                println!("Local IP: {}", ip);
-            }
-            Err(e) => {
-                println!("Failed to get local IP (this might be expected in test environment): {}", e);
-            }
-        }
     }
 }

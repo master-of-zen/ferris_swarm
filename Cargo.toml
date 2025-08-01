@@ -10,7 +10,8 @@ members = [
     "crates/orchestration",
     "crates/client",
     "crates/node", 
-    "crates/constellation"
+    "crates/constellation",
+    "crates/tests"
 ]
 
 [workspace.package]
@@ -33,6 +34,9 @@ ferris-swarm-video = { path = "crates/video" }
 ferris-swarm-config = { path = "crates/config" }
 ferris-swarm-discovery = { path = "crates/discovery" }
 ferris-swarm-orchestration = { path = "crates/orchestration" }
+ferris-swarm-client = { path = "crates/client" }
+ferris-swarm-node = { path = "crates/node" }
+ferris-swarm-constellation = { path = "crates/constellation" }
 
 # External dependencies
 tonic = { version = "0.9", features = ["gzip"]}
