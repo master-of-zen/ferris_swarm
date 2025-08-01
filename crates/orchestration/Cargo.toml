@@ -1,0 +1,13 @@
+[package]
+name = "ferris-swarm-orchestration"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Job orchestration logic for Ferris Swarm"
+license.workspace = true
+
+[dependencies]
+ferris-swarm-core = { workspace = true }
+ferris-swarm-video = { workspace = true }
+ferris-swarm-config = { workspace = true }
+tracing = { workspace = true }

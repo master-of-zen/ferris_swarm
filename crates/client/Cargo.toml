@@ -1,0 +1,30 @@
+[package]
+name = "ferris-swarm-client"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Client service for Ferris Swarm distributed video encoder"
+license.workspace = true
+
+[[bin]]
+name = "ferris_swarm_client"
+path = "src/bin/main.rs"
+
+[dependencies]
+ferris-swarm-core = { workspace = true }
+ferris-swarm-proto = { workspace = true }
+ferris-swarm-logging = { workspace = true }
+ferris-swarm-video = { workspace = true }
+ferris-swarm-config = { workspace = true }
+ferris-swarm-discovery = { workspace = true }
+ferris-swarm-orchestration = { workspace = true }
+
+clap = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+uuid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+futures = { workspace = true }

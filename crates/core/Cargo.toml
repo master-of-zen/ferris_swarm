@@ -1,0 +1,13 @@
+[package]
+name = "ferris-swarm-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Core types and errors for Ferris Swarm distributed video encoder"
+license.workspace = true
+
+[dependencies]
+uuid = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

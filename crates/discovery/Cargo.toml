@@ -1,0 +1,16 @@
+[package]
+name = "ferris-swarm-discovery"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Service discovery for Ferris Swarm"
+license.workspace = true
+
+[dependencies]
+ferris-swarm-core = { workspace = true }
+mdns = { workspace = true }
+if-addrs = { workspace = true }
+tokio = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }

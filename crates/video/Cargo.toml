@@ -1,0 +1,15 @@
+[package]
+name = "ferris-swarm-video"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Video processing utilities for Ferris Swarm"
+license.workspace = true
+
+[dependencies]
+ferris-swarm-core = { workspace = true }
+tempfile = { workspace = true }
+which = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+tracing = { workspace = true }
